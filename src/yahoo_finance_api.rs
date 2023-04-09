@@ -33,8 +33,10 @@ struct YahooFinanceSymbolSearchResponse {
 #[derive(Debug, Deserialize)]
 struct SymbolSearchResult {
     symbol: String,
-    shortname: Option<String>,
-    longname: Option<String>,
+    #[serde(rename = "shortName")]
+    short_name: Option<String>,
+    #[serde(rename = "longName")]
+    long_name: Option<String>,
     sector: Option<String>,
     industry: Option<String>,
     score: f64,
@@ -93,8 +95,8 @@ impl YahooFinanceAPI {
             .into_iter()
             .map(|symbol_result| Symbol {
                 symbol: symbol_result.symbol.clone(),
-                shortname: symbol_result.shortname,
-                longname: symbol_result.longname,
+                short_name: symbol_result.short_name,
+                long_name: symbol_result.long_name,
                 exchange: symbol_result.exchange,
                 sector: symbol_result.sector,
                 industry: symbol_result.industry,
