@@ -4,9 +4,10 @@ use reqwest::Client;
 use serde::Deserialize;
 
 use super::quote::Quote;
+use super::symbol::Symbol;
 
 #[derive(Debug, Deserialize)]
-struct YahooFinanceQuoteResponse  {
+struct YahooFinanceQuoteResponse {
     #[serde(rename = "quoteResponse")]
     quote_response: QuoteResponse,
 }
@@ -32,18 +33,18 @@ struct YahooFinanceSymbolSearchResponse {
 #[derive(Debug, Deserialize)]
 struct SymbolSearchResult {
     symbol: String,
-    shortname: String,
-    longname: String,
+    shortname: Option<String>,
+    longname: Option<String>,
     sector: Option<String>,
     industry: Option<String>,
     score: f64,
     exchange: Option<String>,
-    #[serde(rename="exchDisp")]
+    #[serde(rename = "exchDisp")]
     exch_disp: Option<String>,
 }
 
 pub struct YahooFinanceAPI {
-    client : Client,
+    client: Client,
 }
 
 impl YahooFinanceAPI {
@@ -68,15 +69,18 @@ impl YahooFinanceAPI {
         let quote_response = res.json::<YahooFinanceQuoteResponse>().await?;
 
         let quote_results = &quote_response.quote_response.result;
-        let quotes = quote_results.into_iter().map(|quote_result| Quote {
-            symbol: quote_result.symbol.clone(),
-            regular_market_price: quote_result.regular_market_price,
-        }).collect();
+        let quotes = quote_results
+            .into_iter()
+            .map(|quote_result| Quote {
+                symbol: quote_result.symbol.clone(),
+                regular_market_price: quote_result.regular_market_price,
+            })
+            .collect();
 
         Ok(quotes)
     }
 
-    pub async fn search_symbols(&self, query: &str) -> Result<Vec<String>, Box<dyn Error>> {
+    pub async fn search_symbols(&self, query: &str) -> Result<Vec<Symbol>, Box<dyn Error>> {
         let url = format!(
             "https://query1.finance.yahoo.com/v1/finance/search?q={}&quotesCount=10&newsCount=0",
             query
@@ -85,7 +89,18 @@ impl YahooFinanceAPI {
         let search_response = res.json::<YahooFinanceSymbolSearchResponse>().await?;
 
         let symbol_results = search_response.quotes;
-        let symbols = symbol_results.into_iter().map(|result| result.symbol).collect();
+        let symbols = symbol_results
+            .into_iter()
+            .map(|symbol_result| Symbol {
+                symbol: symbol_result.symbol.clone(),
+                shortname: symbol_result.shortname,
+                longname: symbol_result.longname,
+                exchange: symbol_result.exchange,
+                sector: symbol_result.sector,
+                industry: symbol_result.industry,
+                score: symbol_result.score,
+            })
+            .collect();
 
         Ok(symbols)
     }
@@ -109,7 +124,7 @@ mod tests {
     fn test_get_quotes() {
         let rt = Runtime::new().unwrap();
         let api = YahooFinanceAPI::new();
-        let quotes = rt.block_on(api.get_quotes(vec!["AAPL","MSFT"])).unwrap();
+        let quotes = rt.block_on(api.get_quotes(vec!["AAPL", "MSFT"])).unwrap();
         assert_eq!(quotes.len(), 2);
     }
 
