@@ -1,10 +1,12 @@
 [package]
 name = "stocks_api"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MIT"
 authors = ["Stephan Vedder <stephan.vedder@gmail.com>"]
 description = "A library to get finance data using YahooFinanceAPI"
+keywords = ["finance", "yahoo", "stocks", "rest","serde","api", "reqwest"]
+repository = "https://github.com/Byte-Forge/stocks-api-rs"
 
 [dependencies]
 reqwest = { version = "0.11", features = ["json"] }

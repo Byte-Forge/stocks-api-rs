@@ -1,4 +1,4 @@
-
+#[derive(Clone, Debug)]
 pub struct Symbol
 {
     pub symbol : String,
