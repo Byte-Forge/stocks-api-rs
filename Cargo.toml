@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT"
 authors = ["Stephan Vedder <stephan.vedder@gmail.com>"]
 description = "A library to get finance data using YahooFinanceAPI"
-keywords = ["finance", "yahoo", "stocks", "rest","serde","api", "reqwest"]
+keywords = ["finance", "yahoo", "stocks", "rest","api"]
 repository = "https://github.com/Byte-Forge/stocks-api-rs"
 
 [dependencies]
