@@ -20,8 +20,17 @@ struct QuoteResponse {
 #[derive(Debug, Deserialize)]
 struct QuoteResult {
     symbol: String,
+    #[serde(rename = "shortName")]
+    short_name: Option<String>,
+    #[serde(rename = "longName")]
+    long_name: Option<String>,
     #[serde(rename = "regularMarketPrice")]
     regular_market_price: f64,
+    #[serde(rename = "regularMarketChange")]
+    regular_market_change: f64,
+    currency: Option<String>,
+    market_state: Option<String>,
+
 }
 
 #[derive(Debug, Deserialize)]
@@ -33,9 +42,9 @@ struct YahooFinanceSymbolSearchResponse {
 #[derive(Debug, Deserialize)]
 struct SymbolSearchResult {
     symbol: String,
-    #[serde(rename = "shortName")]
+    #[serde(rename = "shortname")]
     short_name: Option<String>,
-    #[serde(rename = "longName")]
+    #[serde(rename = "longname")]
     long_name: Option<String>,
     sector: Option<String>,
     industry: Option<String>,
@@ -70,12 +79,15 @@ impl YahooFinanceAPI {
         let res = self.client.get(&url).send().await?;
         let quote_response = res.json::<YahooFinanceQuoteResponse>().await?;
 
-        let quote_results = &quote_response.quote_response.result;
+        let quote_results = quote_response.quote_response.result;
         let quotes = quote_results
             .into_iter()
             .map(|quote_result| Quote {
                 symbol: quote_result.symbol.clone(),
+                short_name: quote_result.short_name,
+                long_name: quote_result.long_name,
                 regular_market_price: quote_result.regular_market_price,
+                regular_market_change: quote_result.regular_market_change,
             })
             .collect();
 
