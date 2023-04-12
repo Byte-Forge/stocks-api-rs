@@ -30,7 +30,6 @@ struct QuoteResult {
     regular_market_change: f64,
     currency: Option<String>,
     market_state: Option<String>,
-
 }
 
 #[derive(Debug, Deserialize)]
@@ -88,6 +87,8 @@ impl YahooFinanceAPI {
                 long_name: quote_result.long_name,
                 regular_market_price: quote_result.regular_market_price,
                 regular_market_change: quote_result.regular_market_change,
+                currency: quote_result.currency,
+                market_state: quote_result.market_state,
             })
             .collect();
 
@@ -113,6 +114,7 @@ impl YahooFinanceAPI {
                 sector: symbol_result.sector,
                 industry: symbol_result.industry,
                 score: symbol_result.score,
+                exch_disp: symbol_result.exch_disp,
             })
             .collect();
 
