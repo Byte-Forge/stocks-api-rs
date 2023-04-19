@@ -3,22 +3,55 @@ use std::{error::Error, vec};
 use reqwest::Client;
 use serde::Deserialize;
 
+use super::chart::Chart;
+use super::chart::QuoteIndicator;
 use super::quote::Quote;
 use super::symbol::Symbol;
 
 #[derive(Debug, Deserialize)]
-struct YahooFinanceQuoteResponse {
+struct YFinanceChartResponse {
+    chart: YChart,
+}
+
+#[derive(Debug, Deserialize)]
+struct YChart {
+    result: Vec<YChartResult>,
+    error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct YChartResult {
+    timestamp: Vec<u64>,
+    indicators: YChartIndicators,
+}
+
+#[derive(Debug, Deserialize)]
+struct YChartIndicators {
+    quote: Vec<YQuoteIndicator>,
+}
+
+#[derive(Debug, Deserialize)]
+struct YQuoteIndicator {
+    volume: Vec<Option<u64>>,
+    low: Vec<Option<f64>>,
+    high: Vec<Option<f64>>,
+    open: Vec<Option<f64>>,
+    close: Vec<Option<f64>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct YFinanceQuoteResponse {
     #[serde(rename = "quoteResponse")]
-    quote_response: QuoteResponse,
+    quote_response: YQuoteResponse,
 }
 
 #[derive(Debug, Deserialize)]
-struct QuoteResponse {
-    result: Vec<QuoteResult>,
+struct YQuoteResponse {
+    result: Vec<YQuoteResult>,
 }
 
 #[derive(Debug, Deserialize)]
-struct QuoteResult {
+struct YQuoteResult {
     symbol: String,
     #[serde(rename = "shortName")]
     short_name: Option<String>,
@@ -33,13 +66,13 @@ struct QuoteResult {
 }
 
 #[derive(Debug, Deserialize)]
-struct YahooFinanceSymbolSearchResponse {
+struct YFinanceSymbolSearchResponse {
     #[serde(rename = "quotes")]
-    quotes: Vec<SymbolSearchResult>,
+    quotes: Vec<YSymbolSearchResult>,
 }
 
 #[derive(Debug, Deserialize)]
-struct SymbolSearchResult {
+struct YSymbolSearchResult {
     symbol: String,
     #[serde(rename = "shortname")]
     short_name: Option<String>,
@@ -64,6 +97,33 @@ impl YahooFinanceAPI {
         }
     }
 
+    pub async fn get_history(&self, symbol: &str, interval: &str) -> Result<Chart, Box<dyn Error>> {
+        let url = format!(
+            "https://query1.finance.yahoo.com/v8/finance/chart/{}?interval={}",
+            symbol,
+            interval
+        );
+        let res = self.client.get(&url).send().await?;
+        let chart_response = res.json::<YFinanceChartResponse>().await?;
+
+        let chart_result = chart_response.chart.result;
+        let chart = chart_result
+            .into_iter()
+            .map(|chart_result| Chart {
+                timestamps: chart_result.timestamp,
+                indicators: chart_result.indicators.quote.iter().map(|quote_indicator| QuoteIndicator {
+                    volume: quote_indicator.volume.clone(),
+                    low: quote_indicator.low.clone(),
+                    high: quote_indicator.high.clone(),
+                    open: quote_indicator.open.clone(),
+                    close: quote_indicator.close.clone(),
+                }).collect(),
+            })
+            .collect::<Vec<Chart>>()[0].clone();
+
+        Ok(chart)
+    }
+
     pub async fn get_quote(&self, symbol: &str) -> Result<Quote, Box<dyn Error>> {
         let quotes = self.get_quotes(vec![symbol]).await?;
         assert_eq!(quotes.len(), 1);
@@ -76,7 +136,7 @@ impl YahooFinanceAPI {
             symbols.join(",")
         );
         let res = self.client.get(&url).send().await?;
-        let quote_response = res.json::<YahooFinanceQuoteResponse>().await?;
+        let quote_response = res.json::<YFinanceQuoteResponse>().await?;
 
         let quote_results = quote_response.quote_response.result;
         let quotes = quote_results
@@ -101,7 +161,7 @@ impl YahooFinanceAPI {
             query
         );
         let res = self.client.get(&url).send().await?;
-        let search_response = res.json::<YahooFinanceSymbolSearchResponse>().await?;
+        let search_response = res.json::<YFinanceSymbolSearchResponse>().await?;
 
         let symbol_results = search_response.quotes;
         let symbols = symbol_results
@@ -127,6 +187,14 @@ mod tests {
     use tokio::runtime::Runtime;
 
     use super::*;
+
+    #[test]
+    fn test_get_history() {
+        let rt = Runtime::new().unwrap();
+        let api = YahooFinanceAPI::new();
+        let chart = rt.block_on(api.get_history("AAPL","5m")).unwrap();
+        assert!(chart.indicators.len() > 0);
+    }
 
     #[test]
     fn test_get_quote() {
